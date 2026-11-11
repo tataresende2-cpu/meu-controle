@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#245b4a">
+<title>Meu Controle</title>
+<style>
+:root{--green:#245b4a;--bg:#f3f6f4;--card:#fff;--text:#20312a;--muted:#6b7b73;--red:#b44747}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,-apple-system, sans-serif}
+header{background:var(--green);color:#fff;padding:24px 18px 28px;border-radius:0 0 24px 24px}
+header h1{margin:0 0 4px;font-size:24px}header p{margin:0;opacity:.85;font-size:14px}
+main{max-width:680px;margin:auto;padding:14px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:-12px}
+.card,.panel{background:var(--card);border-radius:16px;padding:15px;box-shadow:0 3px 14px #19382b0d}
+.card small{display:block;color:var(--muted);font-size:12px}.card strong{display:block;font-size:21px;margin-top:5px}
+.card.balance{grid-column:1/-1;border:1px solid #d9e7df}
+.panel{margin-top:13px}.panel h2{font-size:17px;margin:0 0 12px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px}
+input,select,button{font:inherit;width:100%;border-radius:10px;padding:12px;border:1px solid #d6dfd9;background:#fff;color:var(--text)}
+button{border:0;background:var(--green);color:white;font-weight:650;margin-top:12px;cursor:pointer}
+button.secondary{background:#e7eee9;color:var(--green)}button.danger{background:#f8e9e9;color:var(--red);width:auto;padding:7px 10px;margin:0}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid #edf1ee}
+.item:last-child{border:0}.item small{display:block;color:var(--muted);font-size:12px}.amount{font-weight:700;white-space:nowrap}
+.muted{color:var(--muted);font-size:13px}.tabs{display:flex;gap:8px;margin:14px 0}.tabs button{margin:0;padding:10px 6px;font-size:13px}
+.hidden{display:none!important}.positive{color:var(--green)}.negative{color:var(--red)}
+@media(min-width:560px){.cards{grid-template-columns:repeat(3,1fr)}.card.balance{grid-column:auto}}
+</style>
+</head>
+<body>
+<header><h1>Meu Controle</h1><p>Organize seus gastos e acompanhe seu saldo.</p></header>
+<main>
+  <section class="cards">
+    <div class="card"><small>Saldo inicial do mês</small><strong id="initialView">R$ 0,00</strong></div>
+    <div class="card"><small>Total de gastos</small><strong id="spentView">R$ 0,00</strong></div>
+    <div class="card balance"><small>Saldo final / disponível</small><strong id="balanceView">R$ 0,00</strong></div>
+  </section>
+
+  <div class="tabs">
+    <button onclick="showTab('launch')">Lançar gasto</button>
+    <button class="secondary" onclick="showTab('history')">Histórico</button>
+    <button class="secondary" onclick="showTab('settings')">Categorias e saldo</button>
+  </div>
+
+  <section id="launch" class="panel">
+    <h2>Adicionar despesa</h2>
+    <form id="expenseForm">
+      <div class="row">
+        <div><label for="date">Data</label><input id="date" type="date" required></div>
+        <div><label for="value">Valor (R$)</label><input id="value" type="number" min="0.01" step="0.01" placeholder="0,00" required></div>
+      </div>
+      <label for="category">Categoria</label><select id="category"></select>
+      <label for="subcategory">Subcategoria</label><input id="subcategory" list="subOptions" placeholder="Ex.: mercado, aluguel, farmácia"><datalist id="subOptions"></datalist>
+      <label for="description">Descrição</label><input id="description" placeholder="O que você pagou?" required>
+      <label for="payment">Forma de pagamento</label>
+      <select id="payment"><option>Pix</option><option>Dinheiro</option><option>Débito</option><option>Crédito</option><option>Boleto</option><option>Transferência</option><option>Outro</option></select>
+      <button type="submit">Salvar gasto</button>
+    </form>
+  </section>
+
+  <section id="history" class="panel hidden">
+    <h2>Histórico de gastos</h2>
+    <label for="monthFilter">Mês</label><input id="monthFilter" type="month">
+    <div id="expenseList" class="muted">Nenhum gasto lançado neste mês.</div>
+  </section>
+
+  <section id="settings" class="panel hidden">
+    <h2>Saldo inicial</h2>
+    <label for="monthSetting">Mês de referência</label><input id="monthSetting" type="month">
+    <label for="initial">Quanto você tinha no início do mês? (R$)</label><input id="initial" type="number" min="0" step="0.01" placeholder="0,00">
+    <button onclick="saveInitial()">Salvar saldo inicial</button>
+    <h2 style="margin-top:22px">Minhas categorias</h2>
+    <p class="muted">Adicione categorias quando precisar. As subcategorias você pode digitar ao lançar cada gasto.</p>
+    <label for="newCategory">Nova categoria</label><input id="newCategory" placeholder="Ex.: Casa, Pets, Viagem">
+    <button class="secondary" onclick="addCategory()">Adicionar categoria</button>
+    <div id="categoryList" class="muted" style="margin-top:10px"></div>
+    <p class="muted">Seus lançamentos ficam salvos neste navegador e neste aparelho. Faça uma cópia dos dados se trocar de celular ou navegador.</p>
+    <button class="danger" onclick="exportData()" style="width:100%;margin-top:8px">Exportar meus lançamentos (backup)</button>
+  </section>
+</main>
+<script>
+const KEY='meu-controle-financeiro-v1';
+const defaults=['Moradia','Alimentação','Transporte','Saúde','Filhos','Educação','Contas','Compras','Lazer','Beleza e cuidados','Animais','Outros'];
+let data=JSON.parse(localStorage.getItem(KEY)||'null')||{categories:defaults,expenses:[],initials:{}};
+const $=id=>document.getElementById(id);
+const money=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const currentMonth=()=>new Date().toISOString().slice(0,7);
+function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
+function selectedMonth(){return $('monthFilter').value||currentMonth()}
+function monthExpenses(m){return data.expenses.filter(x=>x.date&&x.date.slice(0,7)===m)}
+function totals(m){let spent=monthExpenses(m).reduce((s,x)=>s+Number(x.value),0);let initial=Number(data.initials[m]||0);return {spent,initial,balance:initial-spent}}
+function render(){
+ let m=selectedMonth(),t=totals(m);
+ $('initialView').textContent=money(t.initial);$('spentView').textContent=money(t.spent);
+ $('balanceView').textContent=money(t.balance);$('balanceView').className=t.balance<0?'negative':'positive';
+ $('category').innerHTML=data.categories.map(c=>`<option>${esc(c)}</option>`).join('');
+ $('categoryList').innerHTML=data.categories.map(c=>`<div class="item"><span>${esc(c)}</span><button class="danger" onclick="removeCategory('${encodeURIComponent(c)}')">Excluir</button></div>`).join('');
+ let items=monthExpenses(m).sort((a,b)=>b.date.localeCompare(a.date));
+ $('expenseList').innerHTML=items.length?items.map(x=>`<div class="item"><div><b>${esc(x.description)}</b><small>${x.date.split('-').reverse().join('/')} · ${esc(x.category)} / ${esc(x.subcategory||'Sem subcategoria')} · ${esc(x.payment)}</small></div><span class="amount">${money(x.value)} <button class="danger" onclick="removeExpense('${x.id}')">×</button></span></div>`).join(''):'Nenhum gasto lançado neste mês.';
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function showTab(tab){['launch','history','settings'].forEach(x=>$(x).classList.toggle('hidden',x!==tab));document.querySelectorAll('.tabs button').forEach((b,i)=>{b.className=['launch','history','settings'][i]===tab?'':'secondary'});if(tab==='history')$('monthFilter').value=selectedMonth();if(tab==='settings')$('monthSetting').value=selectedMonth();render()}
+$('expenseForm').addEventListener('submit',e=>{e.preventDefault();data.expenses.push({id:Date.now().toString(),date:$('date').value,category:$('category').value,subcategory:$('subcategory').value.trim(),description:$('description').value.trim(),payment:$('payment').value,value:Number($('value').value)});$('expenseForm').reset();$('date').value=new Date().toISOString().slice(0,10);save();showTab('history')});
+function saveInitial(){let m=$('monthSetting').value||currentMonth();data.initials[m]=Number($('initial').value||0);save();alert('Saldo inicial salvo!')}
+function addCategory(){let c=$('newCategory').value.trim();if(!c)return;if(!data.categories.some(x=>x.toLowerCase()===c.toLowerCase()))data.categories.push(c);$('newCategory').value='';save()}
+function removeCategory(encoded){let c=decodeURIComponent(encoded);if(confirm('Excluir a categoria da lista? Os gastos antigos serão mantidos.')){data.categories=data.categories.filter(x=>x!==c);save()}}
+function removeExpense(id){if(confirm('Excluir este gasto?')){data.expenses=data.expenses.filter(x=>x.id!==id);save()}}
+function exportData(){let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-meu-controle.json';a.click();URL.revokeObjectURL(a.href)}
+$('monthFilter').addEventListener('change',render);
+$('date').value=new Date().toISOString().slice(0,10);$('monthFilter').value=currentMonth();$('monthSetting').value=currentMonth();
+render();
+</script>
+</body></html>
